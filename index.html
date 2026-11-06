@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>RARF Decision Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an operations console. Inputs on the left, the five-stage pipeline reading top to bottom on the right. */
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --ink:#18212f; --muted:#5a6678; --line:#d9dee7; --soft:#e9edf3;
+  --accent:#2a4fc9; --accent-soft:#e3e9fb;
+  --l0:#7a8597; --l1:#3f6fd8; --l2:#c88a12; --l3:#1f8a5b;
+  --bad:#c23b32; --bad-soft:#fbe7e5; --good:#1f8a5b; --good-soft:#e2f3eb;
+  --bar-attack:#c23b32; --bar-resp:#c88a12;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151d; --panel:#171e29; --ink:#e6eaf1; --muted:#9aa5b6; --line:#2a3443; --soft:#1f2834;
+  --accent:#7d9bff; --accent-soft:#1f2b4d;
+  --l0:#8d97a8; --l1:#7d9bff; --l2:#e2a73a; --l3:#43b884;
+  --bad:#ef6b61; --bad-soft:#3a1f1e; --good:#43b884; --good-soft:#16302a;
+  --bar-attack:#ef6b61; --bar-resp:#e2a73a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151d; --panel:#171e29; --ink:#e6eaf1; --muted:#9aa5b6; --line:#2a3443; --soft:#1f2834;
+  --accent:#7d9bff; --accent-soft:#1f2b4d;
+  --l0:#8d97a8; --l1:#7d9bff; --l2:#e2a73a; --l3:#43b884;
+  --bad:#ef6b61; --bad-soft:#3a1f1e; --good:#43b884; --good-soft:#16302a;
+  --bar-attack:#ef6b61; --bar-resp:#e2a73a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:16px}
+h1{font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.01em;margin:0;line-height:1.1}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+nav.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:8px}
+nav.tabs a{font-family:var(--f-display);font-weight:600;font-size:15px;text-decoration:none;color:var(--muted);padding:6px 14px;border-radius:6px}
+nav.tabs a[aria-current="page"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,450px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel h2{font-family:var(--f-display);font-size:18px;font-weight:600;margin:0 0 4px}
+.panel h3{font-family:var(--f-display);font-size:15px;font-weight:600;margin:16px 0 6px}
+.hint{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+input,select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fields .full{grid-column:1/-1}
+button{font:inherit;font-weight:600;font-size:13.5px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] button.primary{color:#0d1220}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#0d1220}}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:4px 6px}
+.actions-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.actions-tbl th{font-weight:500;color:var(--muted);text-align:left;padding:4px 3px;border-bottom:1px solid var(--line);white-space:nowrap}
+.actions-tbl td{padding:4px 3px;vertical-align:middle}
+.actions-tbl input,.actions-tbl select{padding:4px 5px;font-size:12.5px}
+.actions-tbl input[type=number]{width:50px;padding:4px 4px}
+.actions-tbl select{width:52px;padding:4px 2px}
+.tbl-scroll{overflow-x:auto;margin:0 -4px;padding:0 4px}
+.note{font-size:12.5px;color:var(--muted);background:var(--soft);border-radius:6px;padding:8px 10px;margin-top:10px}
+/* pipeline */
+.stages{display:flex;flex-direction:column;gap:10px}
+.stage{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.stage .num{font-family:var(--f-display);font-weight:700;font-size:20px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.stage h3{font-family:var(--f-display);font-size:16px;font-weight:600;margin:3px 0 6px}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+.kv b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.formula{font-family:var(--f-mono);font-size:12.5px;background:var(--soft);border-radius:6px;padding:8px 10px;margin:8px 0 0;overflow-x:auto;white-space:pre}
+.cands{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.cands th{font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:5px 6px;white-space:nowrap}
+.cands td{padding:6px;border-bottom:1px solid var(--soft);font-variant-numeric:tabular-nums}
+.cands td.n{font-family:var(--f-mono);text-align:right}
+.cands tr.best td{background:var(--accent-soft)}
+.cands tr.blocked td{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--bad)}
+.cands tr.blocked td.why{text-decoration:none;color:var(--bad)}
+.chip{display:inline-block;font-family:var(--f-mono);font-size:11.5px;font-weight:500;border-radius:999px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.chip.bad{color:var(--bad);background:var(--bad-soft)}
+.chip.good{color:var(--good);background:var(--good-soft)}
+.chip.muted{color:var(--muted)}
+.ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}
+.rung{border:1px solid var(--line);border-radius:8px;padding:8px 10px;opacity:.55}
+.rung .lv{font-family:var(--f-display);font-weight:700;font-size:17px}
+.rung .nm{font-size:12.5px;font-weight:600}
+.rung .ds{font-size:11.5px;color:var(--muted);line-height:1.35}
+.rung.on{opacity:1;border-width:2px}
+.rung[data-l="0"].on{border-color:var(--l0)} .rung[data-l="0"] .lv{color:var(--l0)}
+.rung[data-l="1"].on{border-color:var(--l1)} .rung[data-l="1"] .lv{color:var(--l1)}
+.rung[data-l="2"].on{border-color:var(--l2)} .rung[data-l="2"] .lv{color:var(--l2)}
+.rung[data-l="3"].on{border-color:var(--l3)} .rung[data-l="3"] .lv{color:var(--l3)}
+@media (max-width:560px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.checks{list-style:none;padding:0;margin:8px 0 0;font-size:13px;display:grid;gap:3px}
+.checks li::before{content:"✓ ";color:var(--good);font-weight:700}
+.checks li.x::before{content:"✗ ";color:var(--bad)}
+.checks li.i::before{content:"↑ ";color:var(--l3)}
+.verdict{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 16px;border-radius:10px;border:2px solid var(--accent);background:var(--accent-soft);margin-bottom:10px}
+.verdict .big{font-family:var(--f-display);font-weight:700;font-size:22px;line-height:1.15}
+.verdict .lvchip{font-family:var(--f-display);font-weight:700;font-size:15px;color:#fff;border-radius:6px;padding:3px 10px}
+.record{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:4px 14px;font-size:12.5px;background:var(--soft);border-radius:6px;padding:10px 12px;margin:10px 0 0}
+.record dt{color:var(--muted)}
+.record dd{margin:0;font-family:var(--f-mono);font-size:12px;overflow-wrap:anywhere}
+@media (max-width:560px){.record{grid-template-columns:minmax(0,1fr)}.record dd{margin-bottom:6px}}
+.expl{display:grid;gap:8px;margin-top:6px}
+.expl div{font-size:13px}
+.expl b{font-family:var(--f-display);font-weight:600}
+/* simulation */
+.sim-grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.sim-grid{grid-template-columns:minmax(0,1fr)}}
+.res-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.res-tbl th{font-weight:500;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:bottom;line-height:1.3}
+.res-tbl th:first-child,.res-tbl td:first-child{text-align:left}
+.res-tbl td{padding:6px 8px;border-bottom:1px solid var(--soft);text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.res-tbl td:first-child{font-family:var(--f-body);font-weight:500}
+.res-tbl tr.rarf td{background:var(--accent-soft)}
+.res-tbl td.zero{color:var(--good)} .res-tbl td.nonzero{color:var(--bad)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin:4px 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--ink);font-family:var(--f-body)}
+.chart .mut{fill:var(--muted)}
+.chart .gridl{stroke:var(--line)}
+.headline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+@media (max-width:640px){.headline{grid-template-columns:minmax(0,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .v{font-family:var(--f-display);font-weight:700;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .l{font-size:12.5px;color:var(--muted)}
+.cond-list{font-size:12.5px;color:var(--muted);margin:6px 0 0;padding-left:18px}
+.cond-list b{color:var(--ink);font-weight:600}
+.about{max-width:760px}
+.about p,.about li{max-width:68ch}
+.about h2{font-family:var(--f-display);font-size:20px;margin:22px 0 6px}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Risk-Aware Response Framework · demo</div>
+      <h1>RARF Decision Lab</h1>
+      <p class="sub">How an autonomous cyber-defence system decides what to do, and how much freedom it gets, following the framework in <i>Ethical Decision-Making in Autonomous Cyber Defense</i>.</p>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#explorer" data-view="explorer">Decision Explorer</a>
+      <a href="#simulation" data-view="simulation">Simulation</a>
+      <a href="#about" data-view="about">About</a>
+    </nav>
+  </header>
+
+  <!-- ============ EXPLORER ============ -->
+  <section id="view-explorer">
+    <div class="grid">
+      <div class="panel">
+        <h2>Incident</h2>
+        <p class="hint">Pick one of the thesis's worked examples, or change any value.</p>
+        <div class="fields">
+          <div class="full">
+            <label for="preset">Scenario</label>
+            <select id="preset"></select>
+          </div>
+          <div><label for="p">Detector confidence p</label><input id="p" type="number" min="0" max="1" step="0.01"></div>
+          <div><label for="delta">Uncertainty margin δ</label><input id="delta" type="number" min="0" max="1" step="0.01"></div>
+          <div><label for="H">Harm if no action, H (0–10)</label><input id="H" type="number" min="0" max="10" step="0.5"></div>
+          <div><label for="crit">Asset criticality</label>
+            <select id="crit"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+          <div><label for="th">Time to serious harm t<sub>h</sub> (min)</label><input id="th" type="number" min="0" step="1"></div>
+          <div><label for="tr">Human response time t<sub>r</sub> (min)</label><input id="tr" type="number" min="0" step="1"></div>
+          <div class="full"><label for="lambda">Irreversibility weight λ</label><input id="lambda" type="number" min="0" step="0.1"></div>
+        </div>
+        <h3>Candidate actions</h3>
+        <p class="hint">e = effectiveness (0–1), F = harm if it was a false alarm, K = collateral harm, r = reversibility (0–1).</p>
+        <div class="tbl-scroll">
+          <table class="actions-tbl">
+            <thead><tr><th>Action</th><th>e</th><th>F</th><th>K</th><th>r</th><th>Rule</th><th></th></tr></thead>
+            <tbody id="actRows"></tbody>
+          </table>
+        </div>
+        <div class="row-btns"><button id="addAct" type="button">Add action</button></div>
+        <div class="note" id="presetNote"></div>
+      </div>
+
+      <div style="min-width:0">
+        <div class="verdict" id="verdict"></div>
+        <div class="stages">
+          <div class="stage"><div class="num">1</div><div style="min-width:0"><h3>Context sensing</h3><div id="s1"></div></div></div>
+          <div class="stage"><div class="num">2</div><div style="min-width:0"><h3>Score each action</h3><div id="s2"></div></div></div>
+          <div class="stage"><div class="num">3</div><div style="min-width:0"><h3>Ethical constraint check</h3><div id="s3"></div></div></div>
+          <div class="stage"><div class="num">4</div><div style="min-width:0"><h3>Choose action and autonomy level</h3><div id="s4"></div></div></div>
+          <div class="stage"><div class="num">5</div><div style="min-width:0"><h3>Decision record and explanations</h3><div id="s5"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SIMULATION ============ -->
+  <section id="view-simulation" hidden>
+    <div class="sim-grid">
+      <div class="panel">
+        <h2>Simulation settings</h2>
+        <p class="hint">Generates fake incidents (real attacks and harmless look-alikes) and runs each response policy on exactly the same incidents.</p>
+        <div class="fields">
+          <div><label for="simN">Incidents</label><input id="simN" type="number" min="50" max="5000" step="50" value="600"></div>
+          <div><label for="simSeed">Random seed</label><input id="simSeed" type="number" min="1" step="1" value="42"></div>
+          <div><label for="simDelta">Margin δ</label><input id="simDelta" type="number" min="0" max="0.5" step="0.01" value="0.05"></div>
+          <div><label for="simLambda">Weight λ</label><input id="simLambda" type="number" min="0" step="0.5" value="1"></div>
+          <div><label for="simTr">Analyst median response (min)</label><input id="simTr" type="number" min="1" step="1" value="20"></div>
+          <div><label for="simRate">Alerts per 8-hour shift</label><input id="simRate" type="number" min="1" max="200" step="1" value="18"></div>
+          <div><label for="simAcc">Analyst accuracy</label><input id="simAcc" type="number" min="0.5" max="1" step="0.05" value="0.85"></div>
+          <div><label for="simBudget">Harm budget per action type</label><input id="simBudget" type="number" min="1" step="1" value="15"></div>
+          <div><label for="simCal">Detector calibration</label>
+            <select id="simCal"><option value="good">Good</option><option value="degraded">Degraded (overconfident)</option></select></div>
+        </div>
+        <div class="row-btns"><button class="primary" id="runSim" type="button">Run simulation</button></div>
+        <ul class="cond-list">
+          <li><b>C1 Manual</b>: every alert joins one analyst's queue.</li>
+          <li><b>C2 Full automation</b>: if p ≥ 0.5, run the most effective action at once, no rules.</li>
+          <li><b>C3 RARF</b>: the full framework.</li>
+          <li><b>C4 ablations</b>: RARF with one part switched off.</li>
+        </ul>
+        <div class="note">Action values come from the thesis's Appendix H catalogue. Everything else (attack mix, timings, detector) is synthetic and illustrative.</div>
+      </div>
+      <div style="min-width:0">
+        <div class="headline" id="headline"></div>
+        <div class="panel">
+          <h2>Total harm by policy</h2>
+          <p class="hint">Lower is better. Harm on the thesis's 0–10 scale, summed over all incidents.</p>
+          <div class="legend"><span><i style="background:var(--bar-attack)"></i>Harm from attacks not stopped</span><span><i style="background:var(--bar-resp)"></i>Harm caused by the response itself</span></div>
+          <div class="chart" id="harmChart"></div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <h2>Results table</h2>
+          <div class="tbl-scroll"><table class="res-tbl" id="resTbl"></table></div>
+          <p class="hint" style="margin-top:8px">Contained = real attack acted on before serious harm. False-alarm actions = actions run against harmless activity. Rule breaches = actions that a hard constraint (C1–C7) forbids, run by the machine.</p>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <h2>Sensitivity to the margin δ</h2>
+          <p class="hint">RARF's total harm as δ changes, with everything else held fixed. Shows how much the result depends on this one setting.</p>
+          <div class="chart" id="sensChart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="view-about" hidden>
+    <div class="panel about">
+      <h2 style="margin-top:0">What this is</h2>
+      <p>A working demo of the Risk-Aware Response Framework (RARF) proposed in the master's thesis <i>Ethical Decision-Making in Autonomous Cyber Defense: Developing a Risk-Aware Response Framework</i> (University of Lagos). It implements the decision rule from Section 3.14 and Appendix C, and a simplified version of the simulation experiment in Section 3.5.</p>
+      <h2>The decision rule</h2>
+      <div class="formula">p_adj = max(0, p − δ)
+F′(a) = F(a) × [1 + λ × (1 − r(a))]
+EB(a) = p_adj × e(a) × H − (1 − p_adj) × F′(a) − K(a)</div>
+      <p>Actions that break a hard constraint are removed first. The remaining action with the highest EB is chosen. If none has EB above zero, the system observes and alerts.</p>
+      <h2>Autonomy thresholds (Table 3.7 defaults)</h2>
+      <div class="tbl-scroll"><table class="res-tbl" style="max-width:640px">
+        <tr><th>Level</th><th>p_adj</th><th>r</th><th>EB</th><th>Criticality</th></tr>
+        <tr><td>L3 Act and notify</td><td>≥ 0.90</td><td>≥ 0.80</td><td>≥ 2.0</td><td>Low, Medium</td></tr>
+        <tr><td>L2 Act with window</td><td>≥ 0.80</td><td>≥ 0.60</td><td>≥ 1.0</td><td>up to High</td></tr>
+        <tr><td>L1 Propose</td><td>≥ 0.50</td><td>any</td><td>&gt; 0</td><td>any</td></tr>
+        <tr><td>L0 Observe</td><td colspan="4" style="text-align:left">anything else</td></tr>
+      </table></div>
+      <p>Time-pressure rule: if t<sub>h</sub> &lt; t<sub>r</sub>, r ≥ 0.80 and EB ≥ 2.0, the level goes up one rung, within the criticality limit.</p>
+      <h2>Hard constraints</h2>
+      <ul id="consList"></ul>
+      <h2>What the demo leaves out</h2>
+      <ul>
+        <li>No real virtual network or trained detector: the simulation uses synthetic incidents and a simulated detector.</li>
+        <li>Harm values are the thesis's illustrative numbers, not values agreed in practitioner workshops.</li>
+        <li>No expert panel or tabletop evaluation.</li>
+        <li>Rate limits and anomaly checks on automated actions are not modelled; the harm budget is.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script id="engine">
+/* ===== RARF decision engine (pure functions) ===== */
+const CONSTRAINTS = {
+  C1:"No irreversible destruction of data or evidence without human approval",
+  C2:"No disconnection of life-safety or clinical devices without a human decision",
+  C3:"No collection or transfer of personal data beyond what the incident requires",
+  C4:"No action against systems outside the organization's control (no hack-back)",
+  C5:"No action cutting someone's access to money, healthcare or essential services without notice and review",
+  C6:"No action whose basis cannot be recorded and explained",
+  C7:"No action on the organization's own prohibited list"
+};
+const CRIT = ["Low","Medium","High","Critical"];
+const LEVELS = [
+  {code:"L0",name:"Observe",sys:"Logs and alerts; takes no action",human:"Investigates and decides"},
+  {code:"L1",name:"Propose",sys:"Recommends and waits for approval",human:"Approves, changes or rejects"},
+  {code:"L2",name:"Act with window",sys:"Acts after a short veto window",human:"Can veto within the window"},
+  {code:"L3",name:"Act and notify",sys:"Acts at once and reports",human:"Reviews afterwards; can undo"}
+];
+const TH = {L3:{p:0.90,r:0.80,eb:2.0,maxCrit:1}, L2:{p:0.80,r:0.60,eb:1.0,maxCrit:2}, L1:{p:0.50}};
+const r2 = x => Math.round(x*100)/100;
+
+function scoreAction(a, pAdj, H, lambda){
+  const Fp = a.F * (1 + lambda * (1 - a.r));
+  const gain = pAdj * a.e * H, fpCost = (1 - pAdj) * Fp, EB = gain - fpCost - a.K;
+  return {...a, Fp, gain, fpCost, EB};
+}
+function baseLevel(pAdj, a, crit){
+  const c = CRIT.indexOf(crit);
+  if (pAdj >= TH.L3.p && a.r >= TH.L3.r && a.EB >= TH.L3.eb && c <= TH.L3.maxCrit) return 3;
+  if (pAdj >= TH.L2.p && a.r >= TH.L2.r && a.EB >= TH.L2.eb && c <= TH.L2.maxCrit) return 2;
+  if (pAdj >= TH.L1.p && a.EB > 0) return 1;
+  return 0;
+}
+function critCap(crit){ const c = CRIT.indexOf(crit); return c <= 1 ? 3 : c === 2 ? 2 : 1; }
+
+/* inc: {p, delta, H, crit, th, tr, lambda}; actions: [{name,e,F,K,r,rule}]
+   opts: {noConstraints, levelCap: {actionName: maxLevel}} */
+function decide(inc, actions, opts = {}){
+  const pAdj = Math.round(Math.max(0, inc.p - inc.delta)*1e6)/1e6;
+  const scored = actions.map(a => scoreAction(a, pAdj, inc.H, inc.lambda));
+  const blocked = opts.noConstraints ? [] : scored.filter(a => a.rule && a.rule !== "none");
+  const permitted = opts.noConstraints ? scored : scored.filter(a => !a.rule || a.rule === "none");
+  let best = null;
+  for (const a of permitted) if (!best || a.EB > best.EB) best = a;
+  const out = {pAdj, scored, blocked, permitted, best: null, level: 0, base: 0, raised: false, capped: false, checks: [], topOverall: null};
+  for (const a of scored) if (!out.topOverall || a.EB > out.topOverall.EB) out.topOverall = a;
+  if (!best || best.EB <= 0){ out.candidate = best; return out; }
+  out.best = best;
+  let lv = baseLevel(pAdj, best, inc.crit); out.base = lv;
+  const fast = inc.th < inc.tr;
+  if (fast && best.r >= 0.80 && best.EB >= TH.L3.eb){
+    const nl = Math.min(3, lv + 1, critCap(inc.crit));
+    if (nl > lv){ lv = nl; out.raised = true; }
+  }
+  const cap = opts.levelCap ? opts.levelCap[best.name] : undefined;
+  if (cap !== undefined && lv > cap){ lv = cap; out.capped = true; }
+  out.level = lv;
+  return out;
+}
+if (typeof module !== "undefined") module.exports = {decide, scoreAction, CONSTRAINTS, CRIT, LEVELS, TH};
+</script>
+
+<script id="sim">
+/* ===== Simulation ===== */
+function rng(seed){ let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+const CAT = { // Appendix H, Table H1
+  alert:{name:"Raise alert and add logging",e:.10,F:0,K:0,r:1},
+  rate:{name:"Rate-limit traffic from source",e:.40,F:1,K:.2,r:1},
+  block:{name:"Block IP address or domain",e:.60,F:2,K:.5,r:1},
+  reauth:{name:"Force re-authentication",e:.50,F:2,K:.2,r:1},
+  disable:{name:"Disable user account",e:.70,F:5,K:1,r:.80},
+  quar:{name:"Quarantine file or email",e:.65,F:2,K:.3,r:.95},
+  isoEnd:{name:"Isolate endpoint",e:.80,F:4,K:1,r:.90},
+  isoSeg:{name:"Isolate network segment",e:.85,F:6,K:5,r:.60},
+  suspend:{name:"Suspend a shared service",e:.90,F:8,K:8,r:.50},
+  wipe:{name:"Wipe and reimage a machine",e:.95,F:8,K:2,r:.05}
+};
+const TYPES = {
+  ransomware:{label:"Ransomware", hAdd:1, th:[3,15], acts:["alert","quar","isoEnd","isoSeg","suspend","wipe"]},
+  credential:{label:"Credential theft", hAdd:0, th:[20,120], acts:["alert","reauth","disable","block"]},
+  exfil:{label:"Data exfiltration", hAdd:.5, th:[10,60], acts:["alert","rate","block","isoEnd","isoSeg"]},
+  web:{label:"Web application attack", hAdd:-.5, th:[15,90], acts:["alert","rate","block","suspend"]}
+};
+const CRIT_H = [3,5,7,9];
+
+function makeIncidents(n, seed, cal, gap){
+  const R = rng(seed), list = [];
+  let clock = 0;
+  const keys = Object.keys(TYPES);
+  for (let i = 0; i < n; i++){
+    const tKey = keys[Math.floor(R()*keys.length)], T = TYPES[tKey];
+    const c = Math.min(3, Math.floor(R()*R()*4 + R()*1.2)); // skewed toward Low/Medium
+    const lifeSafety = c === 3 && R() < 0.4;
+    // well-calibrated detector: draw p, then make the incident real with probability p
+    const pTrue = R() < 0.55 ? 0.5 + R()*0.49 : 0.05 + R()*0.45;
+    const real = R() < pTrue;
+    const pRep = cal === "degraded" ? Math.min(0.99, pTrue + 0.18*(1 - pTrue)) : pTrue;
+    const H = Math.max(0, Math.min(10, CRIT_H[c] + T.hAdd + (R()-0.5)));
+    const th = T.th[0] + R()*(T.th[1]-T.th[0]);
+    const acts = T.acts.map(k => {
+      const a = {...CAT[k], key:k, rule:"none"};
+      if (k === "wipe") a.rule = "C1";
+      if (lifeSafety && (k === "isoSeg" || k === "suspend")) a.rule = "C2";
+      return a;
+    });
+    clock += -Math.log(Math.max(1e-9, R())) * gap; // alerts arrive at random times
+    list.push({id:i, arr:clock, type:tKey, crit:CRIT[c], real, p:pRep, pTrue, H, th, acts, u:[R(),R(),R(),R()]});
+  }
+  return list;
+}
+function humanDelay(u, median){ // log-normal around the median
+  const z = Math.sqrt(-2*Math.log(Math.max(1e-9,u[0]))) * Math.cos(2*Math.PI*u[1]);
+  return median * Math.exp(0.6*z);
+}
+function outcome(inc, act, t, byMachine){
+  let attack = 0, resp = 0, contained = false, fa = false, breach = false;
+  const eff = act ? act.e * (t <= inc.th ? 1 : inc.th / t) : 0;
+  if (inc.real){ attack = inc.H * (1 - eff); contained = !!act && t <= inc.th && act.e >= 0.5; }
+  if (act){
+    resp += act.K;
+    if (!inc.real){ resp += act.F * (1 + (1 - act.r)); fa = true; }
+    if (byMachine && act.rule && act.rule !== "none") breach = true;
+  }
+  return {attack, resp, contained, fa, breach};
+}
+function humanPick(inc){ // a correct analyst picks the best permitted action as if the threat is certain
+  let best = null;
+  for (const a of inc.acts){ if (a.rule !== "none") continue; const eb = a.e*inc.H - a.K; if (!best || eb > best.eb) best = {...a, eb}; }
+  return best;
+}
+function runPolicy(incs, policy, S){
+  const tot = {attack:0, resp:0, contained:0, real:0, fa:0, breach:0, human:0};
+  const used = {}, cap = {};
+  let freeAt = 0; // one analyst works through a queue of alerts
+  const humanTime = inc => { const start = Math.max(inc.arr, freeAt); freeAt = start + humanDelay(inc.u, S.tr); return freeAt - inc.arr; };
+  for (const inc of incs){
+    if (inc.real) tot.real++;
+    const humanRight = inc.u[2] < S.acc;
+    let act = null, t = Infinity, machine = false;
+    const manual = () => {
+      tot.human++;
+      const thinksReal = humanRight ? inc.real : !inc.real;
+      const d = humanTime(inc);
+      if (thinksReal){ act = humanPick(inc); t = d; }
+    };
+    if (policy.kind === "manual") manual();
+    else if (policy.kind === "auto"){
+      if (inc.p >= 0.5){ act = inc.acts.reduce((b,a) => a.e > b.e ? a : b); t = 0.5; machine = true; }
+      else manual();
+    } else {
+      const res = decide({p:inc.p, delta:policy.delta ?? S.delta, H:inc.H, crit:inc.crit, th:inc.th, tr:S.tr, lambda:policy.lambda ?? S.lambda},
+                         inc.acts, {noConstraints:policy.noConstraints, levelCap: policy.noBudget ? null : cap});
+      const a = res.best, lv = res.level;
+      if (!a || lv === 0) manual();
+      else if (lv === 3){ act = a; t = 0.5; machine = true; }
+      else if (lv === 2){
+        const window = 5;
+        if (freeAt <= inc.arr + 2){ freeAt = Math.max(freeAt, inc.arr) + 3; tot.human++; const veto = humanRight ? !inc.real : inc.real; if (!veto){ act = a; t = window; machine = true; } }
+        else { act = a; t = window; machine = true; }
+      } else { // L1 propose
+        tot.human++;
+        const d = humanTime(inc);
+        const approve = humanRight ? inc.real : !inc.real;
+        if (approve){ act = a; t = d; }
+      }
+      // harm budget: confirmed harm from automated actions counts against the action type
+      if (!policy.noBudget && act && machine){
+        const harm = act.K + (inc.real ? 0 : act.F * (1 + (1 - act.r)));
+        used[act.name] = (used[act.name] || 0) + harm;
+        if (used[act.name] > S.budget){ cap[act.name] = Math.max(0, (cap[act.name] ?? lv) - 1); used[act.name] = 0; }
+      }
+    }
+    const o = outcome(inc, act, t, machine);
+    tot.attack += o.attack; tot.resp += o.resp; tot.contained += o.contained ? 1 : 0; tot.fa += o.fa ? 1 : 0; tot.breach += o.breach ? 1 : 0;
+  }
+  tot.total = tot.attack + tot.resp;
+  return tot;
+}
+const POLICIES = [
+  {id:"C1", label:"C1 Manual", kind:"manual"},
+  {id:"C2", label:"C2 Full automation", kind:"auto"},
+  {id:"C3", label:"C3 RARF", kind:"rarf"},
+  {id:"C4a", label:"C4 RARF, no constraints", kind:"rarf", noConstraints:true},
+  {id:"C4b", label:"C4 RARF, no reversibility weight", kind:"rarf", lambda:0},
+  {id:"C4c", label:"C4 RARF, no margin δ", kind:"rarf", delta:0},
+  {id:"C4d", label:"C4 RARF, no harm budget", kind:"rarf", noBudget:true}
+];
+function simulate(S){
+  const incs = makeIncidents(S.n, S.seed, S.cal, 480 / S.rate);
+  const results = POLICIES.map(p => ({...p, ...runPolicy(incs, p, S)}));
+  const sens = [0, .025, .05, .1, .15, .2, .3].map(d => ({d, total: runPolicy(incs, {kind:"rarf", delta:d}, S).total}));
+  return {incs, results, sens};
+}
+if (typeof module !== "undefined") module.exports.simulate = simulate;
+</script>
+
+<script>
+/* ===== UI ===== */
+const $ = id => document.getElementById(id);
+const PRESETS = [
+  {name:"Bank: ransomware on a loan-processing host (Examples 1–2)", p:.85, delta:.05, H:8, crit:"High", th:12, tr:10, lambda:1,
+   acts:[{name:"Isolate host",e:.8,F:4,K:1,r:.9,rule:"none"},{name:"Block outbound connections",e:.6,F:2,K:.5,r:1,rule:"none"},{name:"Shut down core database",e:.95,F:9,K:9,r:.5,rule:"none"}],
+   note:"All values from the thesis (Examples 1–2 and Appendix F). Expected: isolate host, EB 3.24, level L2."},
+  {name:"Hospital: isolate the clinical network (Example 3)", p:.80, delta:.05, H:9, crit:"Critical", th:30, tr:10, lambda:1,
+   acts:[{name:"Isolate clinical network segment",e:.9,F:8,K:7,r:.4,rule:"C2"},{name:"Isolate administrative workstations",e:.4,F:2,K:1,r:.9,rule:"none"}],
+   note:"Clinical-segment values from the thesis (Example 3). Expected: blocked by C2 (its EB would be −4.13). The administrative-workstations alternative and t_h/t_r are illustrative values added for this demo; the thesis names the alternative but gives no numbers."},
+  {name:"University: block an unusual login address (Example 4)", p:.70, delta:.05, H:3, crit:"Medium", th:60, tr:10, lambda:1,
+   acts:[{name:"Block the address",e:.7,F:2,K:.5,r:1,rule:"none"}],
+   note:"p, δ, H and action values from the thesis (Example 4). Expected: EB 0.17, level L1. Criticality and t_h/t_r are illustrative."},
+  {name:"Retail: fast ransomware on file servers (Example 5)", p:.92, delta:.05, H:9, crit:"Medium", th:3, tr:10, lambda:1,
+   acts:[{name:"Isolate affected servers",e:.85,F:3,K:.5,r:.95,rule:"none"}],
+   note:"All values from the thesis (Example 5). Expected: EB 5.75, base level L2, raised to L3 by the time-pressure rule."},
+  {name:"Custom (start from the Appendix H catalogue)", p:.75, delta:.05, H:6, crit:"Medium", th:20, tr:10, lambda:1,
+   acts:[{name:"Block IP address or domain",e:.6,F:2,K:.5,r:1,rule:"none"},{name:"Isolate endpoint",e:.8,F:4,K:1,r:.9,rule:"none"},{name:"Wipe and reimage a machine",e:.95,F:8,K:2,r:.05,rule:"C1"}],
+   note:"Action values from the Appendix H illustrative catalogue. Change anything to see how the decision moves."}
+];
+let state = null;
+const fmt = (x, d = 2) => (Math.abs(x) < 1e-9 ? 0 : x).toFixed(d).replace("-", "−");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function loadPreset(i){
+  const P = PRESETS[i];
+  state = {inc:{p:P.p, delta:P.delta, H:P.H, crit:P.crit, th:P.th, tr:P.tr, lambda:P.lambda}, acts:P.acts.map(a => ({...a}))};
+  for (const k of ["p","delta","H","th","tr","lambda"]) $(k).value = P[k];
+  $("crit").value = P.crit; $("presetNote").textContent = P.note;
+  renderActs(); renderDecision();
+}
+function renderActs(){
+  const opts = ["none", ...Object.keys(CONSTRAINTS)];
+  $("actRows").innerHTML = state.acts.map((a,i) => `<tr>
+    <td><input id="an${i}" data-i="${i}" data-k="name" value="${esc(a.name)}" aria-label="Action name" style="min-width:100px"></td>
+    ${["e","F","K","r"].map(k => `<td><input id="a${k}${i}" type="number" data-i="${i}" data-k="${k}" value="${a[k]}" step="${k==="e"||k==="r"?0.05:0.5}" min="0" max="${k==="e"||k==="r"?1:10}" aria-label="${k}"></td>`).join("")}
+    <td><select id="ar${i}" data-i="${i}" data-k="rule" aria-label="Hard constraint">${opts.map(o => `<option value="${o}" ${a.rule===o?"selected":""}>${o==="none"?"—":o}</option>`).join("")}</select></td>
+    <td><button type="button" class="ghost" data-del="${i}" aria-label="Remove action">✕</button></td></tr>`).join("");
+}
+$("actRows").addEventListener("input", e => {
+  const t = e.target, i = +t.dataset.i, k = t.dataset.k; if (k === undefined) return;
+  state.acts[i][k] = (k === "name" || k === "rule") ? t.value : (parseFloat(t.value) || 0);
+  renderDecision();
+});
+$("actRows").addEventListener("click", e => {
+  const d = e.target.dataset.del; if (d === undefined) return;
+  state.acts.splice(+d, 1); renderActs(); renderDecision();
+});
+$("addAct").addEventListener("click", () => { state.acts.push({name:"New action",e:.5,F:2,K:.5,r:1,rule:"none"}); renderActs(); renderDecision(); });
+for (const k of ["p","delta","H","th","tr","lambda"]) $(k).addEventListener("input", () => { state.inc[k] = parseFloat($(k).value) || 0; renderDecision(); });
+$("crit").addEventListener("change", () => { state.inc.crit = $("crit").value; renderDecision(); });
+$("preset").innerHTML = PRESETS.map((p,i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
+$("preset").addEventListener("change", () => loadPreset(+$("preset").value));
+
+function renderDecision(){
+  const inc = state.inc, R = decide(inc, state.acts), a = R.best, L = LEVELS[R.level];
+  const lvColor = `var(--l${R.level})`;
+  // verdict
+  $("verdict").style.borderColor = lvColor;
+  $("verdict").innerHTML = a
+    ? `<span class="lvchip" style="background:${lvColor}">${L.code}</span><div><div class="eyebrow">Decision</div><div class="big">${esc(a.name)}</div></div><div style="color:var(--muted)">${L.name}: ${L.sys.toLowerCase()}</div>`
+    : `<span class="lvchip" style="background:var(--l0)">L0</span><div><div class="eyebrow">Decision</div><div class="big">Observe and alert a human</div></div><div style="color:var(--muted)">${R.permitted.length ? "No permitted action is expected to do more good than harm." : "Every candidate action is blocked by a hard constraint."}</div>`;
+  // stage 1
+  const fast = inc.th < inc.tr;
+  $("s1").innerHTML = `<div class="kv"><span>p <b>${fmt(inc.p)}</b></span><span>δ <b>${fmt(inc.delta)}</b></span><span>p<sub>adj</sub> <b>${fmt(R.pAdj)}</b></span><span>H <b>${fmt(inc.H,1)}</b></span><span>Asset <b>${inc.crit}</b></span><span>t<sub>h</sub> <b>${inc.th} min</b></span><span>t<sub>r</sub> <b>${inc.tr} min</b></span></div>
+    <div class="formula">p_adj = max(0, ${fmt(inc.p)} − ${fmt(inc.delta)}) = ${fmt(R.pAdj)}</div>
+    <p class="hint" style="margin:8px 0 0">${fast ? `Harm would arrive in ${inc.th} min, before a human can respond (${inc.tr} min). The time-pressure rule may apply.` : `A human can respond (${inc.tr} min) before serious harm (${inc.th} min).`}</p>`;
+  // stage 2
+  const rows = [...R.scored].sort((x,y) => y.EB - x.EB);
+  $("s2").innerHTML = `<div class="tbl-scroll"><table class="cands"><thead><tr><th>Action</th><th style="text-align:right">Harm avoided</th><th style="text-align:right">False-alarm cost</th><th style="text-align:right">Collateral</th><th style="text-align:right">EB</th></tr></thead><tbody>
+    ${rows.map(x => `<tr class="${x===a?"best":""}"><td>${esc(x.name)}</td><td class="n">${fmt(x.gain)}</td><td class="n">−${fmt(x.fpCost)}</td><td class="n">−${fmt(x.K)}</td><td class="n"><b>${fmt(x.EB)}</b></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="formula">EB = p_adj × e × H − (1 − p_adj) × F × [1 + λ(1 − r)] − K${rows[0] ? `\n${esc(rows[0].name)}: ${fmt(R.pAdj)} × ${fmt(rows[0].e)} × ${fmt(inc.H,1)} − ${fmt(1-R.pAdj)} × ${fmt(rows[0].Fp)} − ${fmt(rows[0].K)} = ${fmt(rows[0].EB)}` : ""}</div>`;
+  // stage 3
+  $("s3").innerHTML = R.blocked.length
+    ? `<div class="tbl-scroll"><table class="cands"><tbody>${R.blocked.map(x => `<tr class="blocked"><td>${esc(x.name)}</td><td class="why"><span class="chip bad">${x.rule}</span> ${esc(CONSTRAINTS[x.rule])}</td></tr>`).join("")}</tbody></table></div>
+       <p class="hint" style="margin:8px 0 0">Blocked before ranking, whatever its score${R.blocked.some(x => x === R.topOverall) ? ". The highest-scoring action was blocked, so this changed the outcome." : "."} A human can still choose it.</p>`
+    : `<span class="chip good">All clear</span> <span style="font-size:13px">No candidate action breaks a hard constraint (C1–C7).</span>`;
+  // stage 4
+  let checks = "";
+  if (a){
+    const c = CRIT.indexOf(inc.crit);
+    const t3 = [[R.pAdj >= .9, `p_adj ${fmt(R.pAdj)} ≥ 0.90`],[a.r >= .8, `r ${fmt(a.r)} ≥ 0.80`],[a.EB >= 2, `EB ${fmt(a.EB)} ≥ 2.0`],[c <= 1, `asset ${inc.crit} is Low or Medium`]];
+    const t2 = [[R.pAdj >= .8, `p_adj ${fmt(R.pAdj)} ≥ 0.80`],[a.r >= .6, `r ${fmt(a.r)} ≥ 0.60`],[a.EB >= 1, `EB ${fmt(a.EB)} ≥ 1.0`],[c <= 2, `asset ${inc.crit} is not Critical`]];
+    const li = arr => arr.map(([ok,t]) => `<li class="${ok?"":"x"}">${t}</li>`).join("");
+    checks = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px">
+      <div><div class="eyebrow">Tests for L3</div><ul class="checks">${li(t3)}</ul></div>
+      <div><div class="eyebrow">Tests for L2</div><ul class="checks">${li(t2)}</ul></div></div>
+      <p style="font-size:13px;margin:10px 0 0">Base level <b>${LEVELS[R.base].code}</b>${R.raised ? `, <span style="color:var(--l3);font-weight:600">raised to ${L.code} by the time-pressure rule</span> (t<sub>h</sub> ${inc.th} &lt; t<sub>r</sub> ${inc.tr}, r ≥ 0.80, EB ≥ 2.0).` : "."}</p>`;
+  }
+  $("s4").innerHTML = `<div class="ladder">${LEVELS.map((l,i) => `<div class="rung ${i===R.level?"on":""}" data-l="${i}"><div class="lv">${l.code}</div><div class="nm">${l.name}</div><div class="ds">${l.sys}</div></div>`).join("")}</div>${checks}`;
+  // stage 5
+  const now = new Date(), ts = now.toISOString().slice(0,19).replace("T"," ");
+  const ref = "AD-" + now.getFullYear() + "-" + String(Math.floor(Math.abs(Math.sin(inc.p*97+inc.H*13+state.acts.length)*1e6))).padStart(6,"0");
+  const cand = rows.map(x => `${x.name} (${fmt(x.EB)})`).join("; ");
+  const cons = R.blocked.length ? R.blocked.map(x => `${x.name} excluded by ${x.rule}`).join("; ") : "None triggered";
+  const chosen = a ? `${a.name}; ${L.code} (${L.name.toLowerCase()})` : "Observe and alert; L0";
+  const humans = R.level === 3 ? "Duty analyst notified after action; can undo" : R.level === 2 ? "Duty analyst notified; 5-minute veto window" : R.level === 1 ? "Duty analyst asked to approve" : "Duty analyst alerted to investigate";
+  const record = [
+    ["Reference", ref], ["Date and time", ts], ["System", "RARF Decision Lab demo"],
+    ["Asset and class", inc.crit], ["Inputs", `p = ${fmt(inc.p)}; δ = ${fmt(inc.delta)}; p_adj = ${fmt(R.pAdj)}; H = ${fmt(inc.H,1)}; t_h = ${inc.th} min; t_r = ${inc.tr} min; λ = ${fmt(inc.lambda,1)}`],
+    ["Candidate actions and EB", cand || "None"], ["Constraints applied", cons], ["Chosen action and level", chosen],
+    ["Humans involved", humans], ["Outcome", "Pending confirmation"], ["Autonomy Owner", "(named senior role)"]
+  ];
+  const recText = record.map(([k,v]) => `${k.padEnd(25)}${v}`).join("\n");
+  const analyst = a ? `Chosen because it has the highest expected net benefit (${fmt(a.EB)}) of the permitted actions. Adjusted confidence ${fmt(R.pAdj)}; reversibility ${fmt(a.r)}.${R.raised ? " Raised one level because harm would arrive before a person could respond." : ""}${R.blocked.length ? ` ${R.blocked.length} action(s) blocked by hard constraints.` : ""}`
+    : `No permitted action scored above zero${R.blocked.length ? `, and ${R.blocked.length} action(s) were blocked by hard constraints` : ""}. Investigate and decide.`;
+  const manager = a ? `${R.level >= 2 ? "The system acted" : "The system proposed acting"} (${a.name.toLowerCase()}) on a ${inc.crit.toLowerCase()}-criticality asset because the expected benefit clearly outweighed the risk of a false alarm.` : `The system did not act: no option was expected to do more good than harm. A person has been alerted.`;
+  const affected = a ? `We ${R.level >= 2 ? "took" : "may take"} a temporary security step (${a.name.toLowerCase()}) to protect our systems. If this affected you, you can ask for a review by a member of staff.` : `No action affecting you was taken.`;
+  $("s5").innerHTML = `<div class="expl"><div><b>For the analyst.</b> ${esc(analyst)}</div><div><b>For a manager.</b> ${esc(manager)}</div><div><b>For an affected person.</b> ${esc(affected)}</div></div>
+    <dl class="record" id="recText">${record.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl><div class="row-btns"><button type="button" id="copyRec">Copy record</button></div>`;
+  $("copyRec").onclick = () => {
+    const done = () => { $("copyRec").textContent = "Copied"; setTimeout(() => $("copyRec").textContent = "Copy record", 1500); };
+    try { navigator.clipboard.writeText(recText).then(done, () => selectRec()); } catch(e){ selectRec(); }
+  };
+}
+function selectRec(){ const r = document.createRange(); r.selectNodeContents($("recText")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+/* ===== Simulation UI ===== */
+function runSimUI(){
+  const S = {n: Math.min(5000, Math.max(50, +$("simN").value || 600)), seed: +$("simSeed").value || 42, delta: +$("simDelta").value, lambda: +$("simLambda").value,
+             tr: +$("simTr").value || 20, acc: +$("simAcc").value || .85, budget: +$("simBudget").value || 15, rate: +$("simRate").value || 18, cal: $("simCal").value};
+  const {incs, results, sens} = simulate(S);
+  const real = incs.filter(i => i.real).length;
+  const m = Object.fromEntries(results.map(r => [r.id, r]));
+  const cut = (1 - m.C3.total / m.C2.total) * 100, cutM = (1 - m.C3.total / m.C1.total) * 100;
+  $("headline").innerHTML = `
+    <div class="stat"><div class="v">${S.n}</div><div class="l">incidents: ${real} real attacks, ${S.n - real} harmless look-alikes</div></div>
+    <div class="stat"><div class="v">${cut >= 0 ? cut.toFixed(0) + "% less" : (-cut).toFixed(0) + "% more"}</div><div class="l">total harm with RARF than with full automation</div></div>
+    <div class="stat"><div class="v">${cutM >= 0 ? cutM.toFixed(0) + "% less" : (-cutM).toFixed(0) + "% more"}</div><div class="l">total harm with RARF than with manual response</div></div>`;
+  drawHarm(results);
+  $("resTbl").innerHTML = `<thead><tr><th>Policy</th><th>Attack harm</th><th>Response harm</th><th>Total harm</th><th>Contained</th><th>False-alarm actions</th><th>Rule breaches</th><th>Human decisions</th></tr></thead><tbody>` +
+    results.map(r => `<tr class="${r.id==="C3"?"rarf":""}"><td>${r.label}</td><td>${r.attack.toFixed(0)}</td><td>${r.resp.toFixed(0)}</td><td><b>${r.total.toFixed(0)}</b></td><td>${(100*r.contained/Math.max(1,r.real)).toFixed(0)}%</td><td>${r.fa}</td><td class="${r.breach?"nonzero":"zero"}">${r.breach}</td><td>${r.human}</td></tr>`).join("") + "</tbody>";
+  drawSens(sens, S.delta);
+}
+function drawHarm(results){
+  const W = 720, rowH = 34, top = 8, left = 210, right = 70, H = top + results.length * rowH + 30;
+  const max = Math.max(...results.map(r => r.total)) * 1.05, X = v => left + v / max * (W - left - right);
+  const step = niceStep(max / 5), ticks = []; for (let v = 0; v <= max; v += step) ticks.push(v);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Total harm by policy">`;
+  ticks.forEach(v => { s += `<line class="gridl" x1="${X(v)}" x2="${X(v)}" y1="${top}" y2="${H-24}"/><text class="mut" x="${X(v)}" y="${H-8}" font-size="11" text-anchor="middle">${v}</text>`; });
+  results.forEach((r,i) => {
+    const y = top + i*rowH + 6, h = rowH - 12;
+    s += `<text x="${left-10}" y="${y+h/2+4}" font-size="12.5" text-anchor="end" ${r.id==="C3"?'font-weight="600"':''}>${r.label}</text>`;
+    s += `<rect x="${X(0)}" y="${y}" width="${X(r.attack)-X(0)}" height="${h}" fill="var(--bar-attack)" rx="2"/>`;
+    s += `<rect x="${X(r.attack)+1}" y="${y}" width="${Math.max(0,X(r.total)-X(r.attack)-1)}" height="${h}" fill="var(--bar-resp)" rx="2"/>`;
+    s += `<text x="${X(r.total)+6}" y="${y+h/2+4}" font-size="12" font-family="var(--f-mono)">${r.total.toFixed(0)}</text>`;
+  });
+  $("harmChart").innerHTML = s + "</svg>";
+}
+function drawSens(sens, cur){
+  const W = 720, H = 220, l = 56, r = 20, t = 14, b = 36;
+  const xs = sens.map(d => d.d), ys = sens.map(d => d.total);
+  const ymin = Math.min(...ys) * 0.95, ymax = Math.max(...ys) * 1.03;
+  const X = v => l + (v - xs[0]) / (xs.at(-1) - xs[0]) * (W - l - r), Y = v => t + (1 - (v - ymin) / (ymax - ymin)) * (H - t - b);
+  const step = niceStep((ymax - ymin) / 4); const ticks = []; for (let v = Math.ceil(ymin/step)*step; v <= ymax; v += step) ticks.push(v);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="RARF total harm as the margin changes">`;
+  ticks.forEach(v => { s += `<line class="gridl" x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}"/><text class="mut" x="${l-8}" y="${Y(v)+4}" font-size="11" text-anchor="end">${Math.round(v)}</text>`; });
+  xs.forEach(v => { s += `<text class="mut" x="${X(v)}" y="${H-14}" font-size="11" text-anchor="middle">${v}</text>`; });
+  s += `<text class="mut" x="${(l+W-r)/2}" y="${H}" font-size="11" text-anchor="middle">margin δ</text>`;
+  s += `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${sens.map(d => `${X(d.d)},${Y(d.total)}`).join(" ")}"/>`;
+  sens.forEach(d => { const on = Math.abs(d.d - cur) < 1e-9; s += `<circle cx="${X(d.d)}" cy="${Y(d.total)}" r="${on?5:3.5}" fill="${on?"var(--accent)":"var(--panel)"}" stroke="var(--accent)" stroke-width="2"/>`; if (on) s += `<text x="${X(d.d)}" y="${Y(d.total)+22}" font-size="11.5" text-anchor="middle" font-weight="600">current ${Math.round(d.total)}</text>`; });
+  $("sensChart").innerHTML = s + "</svg>";
+}
+function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), n = raw / p; return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p; }
+$("runSim").addEventListener("click", runSimUI);
+
+/* ===== Views ===== */
+function show(){
+  let v = (location.hash || "#explorer").slice(1); if (!["explorer","simulation","about"].includes(v)) v = "explorer";
+  for (const n of ["explorer","simulation","about"]) $("view-" + n).hidden = n !== v;
+  document.querySelectorAll("nav.tabs a").forEach(a => a.toggleAttribute("aria-current", a.dataset.view === v) || (a.dataset.view === v && a.setAttribute("aria-current","page")));
+  document.querySelectorAll("nav.tabs a").forEach(a => { if (a.dataset.view === v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+}
+window.addEventListener("hashchange", show);
+$("consList").innerHTML = Object.entries(CONSTRAINTS).map(([k,v]) => `<li><b>${k}</b> ${esc(v)}</li>`).join("");
+loadPreset(0); runSimUI(); show();
+</script>
+
+</body>
+</html>
